@@ -84,14 +84,41 @@ test "$installed_clips" -eq 106
 echo "=== 12. Testing sound test with voice clips installed ==="
 "$HOME/.local/bin/cosmic-mousetrap" sound test
 
-echo "=== 13. Testing uninstall ==="
+echo "=== 13. Testing self-healing doctor in installed environment ==="
+"$HOME/.local/bin/cosmic-mousetrap" doctor
+"$HOME/.local/bin/cosmic-mousetrap" doctor --heal
+
+# Inject corrupted setting and stale tmp file, then verify doctor auto-heals them
+echo "corrupted_val" > "$HOME/.config/cosmic/com.system76.CosmicComp/v1/cursor_follows_focus"
+touch "$HOME/.config/cosmic-mousetrap/stale_test.tmp"
+echo -e "volume = 999\nmalformed_broken_line" >> "$HOME/.config/cosmic-mousetrap/config.toml"
+
+echo "Verifying doctor heals corrupted files..."
+"$HOME/.local/bin/cosmic-mousetrap" doctor --heal
+
+test "$(cat "$HOME/.config/cosmic/com.system76.CosmicComp/v1/cursor_follows_focus")" = "false"
+test ! -f "$HOME/.config/cosmic-mousetrap/stale_test.tmp"
+if grep -q "malformed_broken_line" "$HOME/.config/cosmic-mousetrap/config.toml"; then
+    echo "Doctor failed to remove malformed line!"
+    exit 1
+fi
+echo "Doctor verified: auto-healed corrupted config, settings, and stale files!"
+
+echo "=== 14. Testing UI non-interactive error handling ==="
+if "$HOME/.local/bin/cosmic-mousetrap" ui < /dev/null 2>/dev/null; then
+    echo "Expected UI without tty to fail!"
+    exit 1
+fi
+echo "UI correctly required a terminal tty."
+
+echo "=== 15. Testing uninstall ==="
 "$SCRIPT_DIR/uninstall.sh"
 test ! -f "$HOME/.local/bin/cosmic-mousetrap"
 test ! -f "$HOME/.config/systemd/user/cosmic-mousetrap.service"
 test -f "$HOME/.config/cosmic-mousetrap/config.toml"
 echo "Uninstall kept config as expected!"
 
-echo "=== 14. Testing uninstall --purge ==="
+echo "=== 16. Testing uninstall --purge ==="
 "$SCRIPT_DIR/uninstall.sh" --purge
 test ! -d "$HOME/.config/cosmic-mousetrap"
 test ! -d "$HOME/.local/share/cosmic-mousetrap"

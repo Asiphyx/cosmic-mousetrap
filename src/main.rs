@@ -4,16 +4,28 @@
 //! Config: ~/.config/cosmic-mousetrap/config.toml (re-read live), extra games in
 //! ~/.config/cosmic-mousetrap/games.txt.
 
+mod doctor;
+mod ui;
+
 use std::env;
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const APP: &str = "cosmic-mousetrap";
+extern "C" {
+    fn getuid() -> u32;
+}
+
+fn current_uid() -> u32 {
+    unsafe { getuid() }
+}
+
+pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub(crate) const APP: &str = "cosmic-mousetrap";
 const POLL_INTERVAL: Duration = Duration::from_millis(2500);
 /// Consecutive empty polls (x POLL_INTERVAL = ~5 s) required before switching ON -> OFF.
 const EXIT_POLLS: u32 = 2;
@@ -30,7 +42,7 @@ const DEFAULT_RUNTIMES: &[&str] = &[
 const DEFAULT_PATH_MARKERS: &[&str] = &["steamapps/common"];
 
 /// Preset name -> file stem in the freedesktop / Pop sound themes.
-const PRESETS: &[(&str, &str)] = &[
+pub(crate) const PRESETS: &[(&str, &str)] = &[
     ("pop", "device-added"),
     ("unpop", "device-removed"),
     ("chime", "complete"),
@@ -161,55 +173,55 @@ const DEFAULT_LINES: &[(&str, &str)] = &[
 
 // ---------------------------------------------------------------- paths
 
-fn home_dir() -> PathBuf {
+pub(crate) fn home_dir() -> PathBuf {
     env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("/"))
 }
-fn cosmic_config_path() -> PathBuf {
+pub(crate) fn cosmic_config_path() -> PathBuf {
     home_dir().join(".config/cosmic/com.system76.CosmicComp/v1/cursor_follows_focus")
 }
-fn app_config_dir() -> PathBuf {
+pub(crate) fn app_config_dir() -> PathBuf {
     home_dir().join(".config").join(APP)
 }
-fn config_path() -> PathBuf {
+pub(crate) fn config_path() -> PathBuf {
     app_config_dir().join("config.toml")
 }
-fn games_path() -> PathBuf {
+pub(crate) fn games_path() -> PathBuf {
     app_config_dir().join("games.txt")
 }
-fn sounds_dir() -> PathBuf {
+pub(crate) fn sounds_dir() -> PathBuf {
     app_config_dir().join("sounds")
 }
-fn lines_path() -> PathBuf {
+pub(crate) fn lines_path() -> PathBuf {
     app_config_dir().join("lines.txt")
 }
-fn data_dir() -> PathBuf {
+pub(crate) fn data_dir() -> PathBuf {
     home_dir().join(".local/share").join(APP)
 }
-fn voice_dir() -> PathBuf {
+pub(crate) fn voice_dir() -> PathBuf {
     data_dir().join("voice")
 }
-fn venv_dir() -> PathBuf {
+pub(crate) fn venv_dir() -> PathBuf {
     data_dir().join("venv")
 }
-fn models_dir() -> PathBuf {
+pub(crate) fn models_dir() -> PathBuf {
     data_dir().join("models")
 }
-fn cache_dir() -> PathBuf {
+pub(crate) fn cache_dir() -> PathBuf {
     home_dir().join(".cache").join(APP)
 }
 
 // ---------------------------------------------------------------- config
 
-#[derive(Clone)]
-struct Config {
-    notifications: bool,
-    sound: bool,
-    volume: u8, // 0..=100
-    sound_on: String,
-    sound_off: String,
-    icon_on: String,
-    icon_off: String,
-    voice_model: String,
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Config {
+    pub(crate) notifications: bool,
+    pub(crate) sound: bool,
+    pub(crate) volume: u8, // 0..=100
+    pub(crate) sound_on: String,
+    pub(crate) sound_off: String,
+    pub(crate) icon_on: String,
+    pub(crate) icon_off: String,
+    pub(crate) voice_model: String,
 }
 
 impl Default for Config {
@@ -236,7 +248,7 @@ fn parse_bool(v: &str) -> Option<bool> {
 }
 
 impl Config {
-    fn load() -> Self {
+    pub(crate) fn load() -> Self {
         let mut c = Config::default();
         let Ok(text) = fs::read_to_string(config_path()) else { return c };
         for line in text.lines().map(str::trim) {
@@ -263,7 +275,7 @@ impl Config {
 }
 
 /// Set `key = value` in config.toml, preserving every other line and comment.
-fn write_key(key: &str, value: &str, quote: bool) -> std::io::Result<()> {
+pub(crate) fn write_key(key: &str, value: &str, quote: bool) -> std::io::Result<()> {
     fs::create_dir_all(app_config_dir())?;
     let new_line = if quote { format!("{key} = \"{value}\"") } else { format!("{key} = {value}") };
     let text = fs::read_to_string(config_path()).unwrap_or_default();
@@ -290,14 +302,14 @@ fn write_key(key: &str, value: &str, quote: bool) -> std::io::Result<()> {
 
 // ---------------------------------------------------------------- cosmic setting
 
-fn read_current_state() -> bool {
+pub(crate) fn read_current_state() -> bool {
     fs::read_to_string(cosmic_config_path())
         .map(|s| s.trim().eq_ignore_ascii_case("true"))
         .unwrap_or(false)
 }
 
 /// Write via temp file + rename(2) so cosmic-comp never sees a partial file.
-fn write_state_atomic(enable: bool) -> std::io::Result<()> {
+pub(crate) fn write_state_atomic(enable: bool) -> std::io::Result<()> {
     let target = cosmic_config_path();
     if let Some(parent) = target.parent() {
         fs::create_dir_all(parent)?;
@@ -313,13 +325,13 @@ fn write_state_atomic(enable: bool) -> std::io::Result<()> {
 
 // ---------------------------------------------------------------- game detection
 
-struct Matcher {
+pub(crate) struct Matcher {
     names: Vec<String>,   // exact process names (comm / exe basename)
     markers: Vec<String>, // path fragments (exe / cwd)
 }
 
 impl Matcher {
-    fn load() -> Self {
+    pub(crate) fn load() -> Self {
         let mut names: Vec<String> = DEFAULT_RUNTIMES.iter().map(|s| s.to_string()).collect();
         let mut markers: Vec<String> = DEFAULT_PATH_MARKERS.iter().map(|s| s.to_string()).collect();
         if let Ok(text) = fs::read_to_string(games_path()) {
@@ -331,49 +343,158 @@ impl Matcher {
         Matcher { names, markers }
     }
 
-    fn name_matches(&self, name: &str) -> bool {
+    pub(crate) fn name_matches(&self, name: &str) -> bool {
         self.names.iter().any(|n| {
             n == name || (n.len() > COMM_MAX && n.as_bytes()[..COMM_MAX] == *name.as_bytes())
         })
     }
 
-    fn path_matches(&self, path: &str) -> bool {
+    pub(crate) fn path_matches(&self, path: &str) -> bool {
         self.markers.iter().any(|m| path.contains(m.as_str()))
     }
 
-    fn detect(&self) -> Option<String> {
-        for entry in fs::read_dir("/proc").ok()?.flatten() {
-            let fname = entry.file_name();
-            let Some(pid) = fname.to_str() else { continue };
-            if pid.is_empty() || !pid.bytes().all(|b| b.is_ascii_digit()) {
-                continue;
-            }
-            let p = entry.path();
-
-            if let Ok(exe) = fs::read_link(p.join("exe")) {
-                let s = exe.to_string_lossy().to_lowercase();
-                if self.path_matches(&s) {
-                    return Some(base(&s));
-                }
-                let b = base(&s);
-                if self.name_matches(&b) {
-                    return Some(b);
-                }
-            }
-            if let Ok(comm) = fs::read_to_string(p.join("comm")) {
-                let c = comm.trim().to_lowercase();
+    /// Check a single process ID directly: reads comm first (fast 16-byte stack read),
+    /// then exe link, then cwd link (only if markers exist).
+    pub(crate) fn check_pid(&self, pid: u32) -> Option<String> {
+        let comm_path = format!("/proc/{pid}/comm");
+        if let Ok(mut f) = fs::File::open(&comm_path) {
+            let mut buf = [0u8; 32];
+            let n = f.read(&mut buf).unwrap_or(0);
+            if n > 0 {
+                let comm_str = std::str::from_utf8(&buf[..n]).unwrap_or("");
+                let c = comm_str.trim().to_lowercase();
                 if self.name_matches(&c) {
                     return Some(c);
                 }
             }
-            if let Ok(cwd) = fs::read_link(p.join("cwd")) {
+        } else {
+            return None;
+        }
+
+        // 2. Check exe link
+        let exe_path = format!("/proc/{pid}/exe");
+        if let Ok(exe) = fs::read_link(&exe_path) {
+            let s = exe.to_string_lossy().to_lowercase();
+            if self.path_matches(&s) {
+                return Some(base(&s));
+            }
+            let b = base(&s);
+            if self.name_matches(&b) {
+                return Some(b);
+            }
+        }
+
+        // 3. Check cwd link (only if markers are non-empty and exe did not match)
+        if !self.markers.is_empty() {
+            let cwd_path = format!("/proc/{pid}/cwd");
+            if let Ok(cwd) = fs::read_link(&cwd_path) {
                 let s = cwd.to_string_lossy().to_lowercase();
                 if self.path_matches(&s) {
                     return Some(base(&s));
                 }
             }
         }
+
         None
+    }
+
+    /// Optimized detection: checks last known game PID first. If that process is still
+    /// alive and matches, returns immediately without scanning /proc.
+    /// When scanning /proc, filters out non-user PIDs by UID before inspecting comm/exe.
+    pub(crate) fn detect_cached(&self, last_pid: &mut Option<u32>) -> Option<String> {
+        if let Some(pid) = *last_pid {
+            if let Some(name) = self.check_pid(pid) {
+                return Some(name);
+            }
+            *last_pid = None;
+        }
+
+        let my_uid = current_uid();
+        let Ok(entries) = fs::read_dir("/proc") else { return None };
+
+        for entry in entries.flatten() {
+            let fname = entry.file_name();
+            let Some(pid_str) = fname.to_str() else { continue };
+            if pid_str.is_empty() || !pid_str.bytes().all(|b| b.is_ascii_digit()) {
+                continue;
+            }
+            let Ok(pid) = pid_str.parse::<u32>() else { continue };
+
+            // Optimization: Skip system processes owned by other users or root (unless running as root)
+            if my_uid != 0 {
+                if let Ok(meta) = entry.metadata() {
+                    if meta.uid() != my_uid {
+                        continue;
+                    }
+                }
+            }
+
+            if let Some(name) = self.check_pid(pid) {
+                *last_pid = Some(pid);
+                return Some(name);
+            }
+        }
+
+        None
+    }
+
+    pub(crate) fn detect(&self) -> Option<String> {
+        let mut last_pid = None;
+        self.detect_cached(&mut last_pid)
+    }
+}
+
+pub(crate) struct CachedMatcher {
+    matcher: Matcher,
+    last_mtime: Option<SystemTime>,
+    path: PathBuf,
+}
+
+impl CachedMatcher {
+    pub(crate) fn new() -> Self {
+        let path = games_path();
+        let last_mtime = fs::metadata(&path).and_then(|m| m.modified()).ok();
+        Self {
+            matcher: Matcher::load(),
+            last_mtime,
+            path,
+        }
+    }
+
+    pub(crate) fn get(&mut self) -> &Matcher {
+        let current_mtime = fs::metadata(&self.path).and_then(|m| m.modified()).ok();
+        if current_mtime != self.last_mtime {
+            self.matcher = Matcher::load();
+            self.last_mtime = current_mtime;
+        }
+        &self.matcher
+    }
+}
+
+pub(crate) struct CachedConfig {
+    config: Config,
+    last_mtime: Option<SystemTime>,
+    path: PathBuf,
+}
+
+impl CachedConfig {
+    pub(crate) fn new() -> Self {
+        let path = config_path();
+        let last_mtime = fs::metadata(&path).and_then(|m| m.modified()).ok();
+        Self {
+            config: Config::load(),
+            last_mtime,
+            path,
+        }
+    }
+
+    pub(crate) fn get(&mut self) -> &Config {
+        let current_mtime = fs::metadata(&self.path).and_then(|m| m.modified()).ok();
+        if current_mtime != self.last_mtime {
+            self.config = Config::load();
+            self.last_mtime = current_mtime;
+        }
+        &self.config
     }
 }
 
@@ -427,7 +548,7 @@ fn sound_files_in(dir: &Path) -> Vec<PathBuf> {
 }
 
 /// Built voice clips for a slot: (normal, rare, anomaly).
-fn voice_clips(slot: &str) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
+pub(crate) fn voice_clips(slot: &str) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
     let (mut normal, mut rare, mut anomaly) = (Vec::new(), Vec::new(), Vec::new());
     let prefix = format!("{slot}-");
     let egg_prefix = format!("{slot}-egg-");
@@ -507,7 +628,7 @@ fn pick_voice_line(slot: &str, normal: Vec<PathBuf>, rare: Vec<PathBuf>, anomaly
 }
 
 /// Signature physical cue path (chime+snap for ON, latch+sigh for OFF)
-fn signature_cue_path(slot: &str) -> Option<PathBuf> {
+pub(crate) fn signature_cue_path(slot: &str) -> Option<PathBuf> {
     let p = data_dir().join(if slot == "on" { "on-cue.wav" } else { "off-cue.wav" });
     p.is_file().then_some(p)
 }
@@ -617,7 +738,7 @@ fn notify(enabled: bool, detail: Option<&str>, cfg: &Config) {
     }
 }
 
-fn cue_sound(enabled: bool, cfg: &Config) -> Option<JoinHandle<bool>> {
+pub(crate) fn cue_sound(enabled: bool, cfg: &Config) -> Option<JoinHandle<bool>> {
     if !cfg.sound {
         return None;
     }
@@ -667,13 +788,17 @@ fn cue_sound(enabled: bool, cfg: &Config) -> Option<JoinHandle<bool>> {
 /// `wait`: block until the cue finishes (one-shot CLI commands, which would otherwise
 /// exit and cut the sound off). The daemon passes false and never blocks.
 fn set_and_report(enable: bool, quiet: bool, detail: Option<&str>, wait: bool) {
+    let cfg = Config::load();
+    set_and_report_with_cfg(enable, quiet, detail, wait, &cfg);
+}
+
+fn set_and_report_with_cfg(enable: bool, quiet: bool, detail: Option<&str>, wait: bool, cfg: &Config) {
     match write_state_atomic(enable) {
         Ok(()) => {
             eprintln!("[{APP}] cursor_follows_focus = {enable}");
             if !quiet {
-                let cfg = Config::load();
-                notify(enable, detail, &cfg);
-                if let Some(h) = cue_sound(enable, &cfg) {
+                notify(enable, detail, cfg);
+                if let Some(h) = cue_sound(enable, cfg) {
                     if wait {
                         let _ = h.join();
                     }
@@ -693,8 +818,12 @@ fn run_daemon(quiet: bool) -> ! {
     // handoffs (Steam/Proton) don't flap ON -> OFF -> ON.
     let mut applied: Option<bool> = None;
     let mut misses: u32 = 0;
+    let mut last_game_pid: Option<u32> = None;
+    let mut cached_matcher = CachedMatcher::new();
+    let mut cached_config = CachedConfig::new();
+
     loop {
-        let game = Matcher::load().detect();
+        let game = cached_matcher.get().detect_cached(&mut last_game_pid);
         let target = if game.is_some() {
             misses = 0;
             Some(true)
@@ -714,7 +843,8 @@ fn run_daemon(quiet: bool) -> ! {
                 if let Some(g) = &game {
                     eprintln!("[{APP}] game detected: {g}");
                 }
-                set_and_report(want, quiet, game.as_deref(), false);
+                let cfg = cached_config.get();
+                set_and_report_with_cfg(want, quiet, game.as_deref(), false, cfg);
             }
             applied = Some(want);
         }
@@ -724,7 +854,7 @@ fn run_daemon(quiet: bool) -> ! {
 
 // ---------------------------------------------------------------- sound CLI
 
-fn describe(slot: &str, spec: &str) -> String {
+pub(crate) fn describe(slot: &str, spec: &str) -> String {
     let spec = spec.trim();
     if spec.eq_ignore_ascii_case("voice") {
         let (normal, rare, anomaly) = voice_clips(slot);
@@ -750,7 +880,7 @@ fn describe(slot: &str, spec: &str) -> String {
     }
 }
 
-fn test_slot(slot: &str, cfg: &Config) -> bool {
+pub(crate) fn test_slot(slot: &str, cfg: &Config) -> bool {
     let spec = if slot == "on" { &cfg.sound_on } else { &cfg.sound_off };
     print!("{slot}: testing cue ({}) ... ", describe(slot, spec));
     let _ = std::io::stdout().flush();
@@ -950,7 +1080,7 @@ fn run_checked(cmd: &mut Command, what: &str) -> Result<(), String> {
 }
 
 /// Download pre-rendered 106-clip GLaDOS voice pack from GitHub releases.
-fn voice_download() -> Result<(), String> {
+pub(crate) fn voice_download() -> Result<(), String> {
     let vdir = voice_dir();
     fs::create_dir_all(&vdir).map_err(|e| e.to_string())?;
 
@@ -1142,6 +1272,8 @@ Mousetrap: auto-toggle COSMIC cursor_follows_focus while games run
 usage: cosmic-mousetrap <command> [--quiet]
 
   status                              show setting, detected game, sound/notification config
+  ui | tui | menu                     interactive visual control center with clickable settings
+  doctor [--heal]                     diagnose and self-heal system, config, service, and audio issues
   daemon                              run the watcher (this is what the service does)
   on | off | toggle                   switch manually
   sound ...                           notification sounds (see `cosmic-mousetrap sound list`)
@@ -1156,13 +1288,25 @@ fn main() {
         println!("{APP} {VERSION}");
         return;
     }
-    if args.iter().any(|a| a == "--help" || a == "-h") {
+    if args.is_empty() {
+        let c = Config::load();
+        println!("cursor_follows_focus: {}", read_current_state());
+        println!("game detected:        {}", Matcher::load().detect().unwrap_or_else(|| "none".into()));
+        println!("notifications:        {}", if c.notifications { "enabled" } else { "disabled" });
+        println!("sound:                {} (volume {}, ON: {}, OFF: {})",
+                 if c.sound { "enabled" } else { "muted" }, c.volume, c.sound_on, c.sound_off);
+        return;
+    }
+    if args.iter().any(|a| a == "--help" || a == "-h") && (args.len() == 1 || !matches!(args[0].as_str(), "doctor" | "ui" | "tui" | "menu" | "sound" | "voice")) {
         println!("{USAGE}");
         return;
     }
-    let pos: Vec<&str> = args.iter().filter(|a| !a.starts_with('-')).map(String::as_str).collect();
-    match pos.as_slice() {
-        [] | ["status"] => {
+
+    let first = args[0].as_str();
+    let sub_args: Vec<&str> = args[1..].iter().filter(|a| !a.starts_with("--quiet") && !a.starts_with("-q")).map(String::as_str).collect();
+
+    match first {
+        "status" => {
             let c = Config::load();
             println!("cursor_follows_focus: {}", read_current_state());
             println!("game detected:        {}", Matcher::load().detect().unwrap_or_else(|| "none".into()));
@@ -1170,29 +1314,51 @@ fn main() {
             println!("sound:                {} (volume {}, ON: {}, OFF: {})",
                      if c.sound { "enabled" } else { "muted" }, c.volume, c.sound_on, c.sound_off);
         }
-        ["on"] => set_and_report(true, quiet, None, true),
-        ["off"] => set_and_report(false, quiet, None, true),
-        ["toggle"] => set_and_report(!read_current_state(), quiet, None, true),
-        ["daemon"] => run_daemon(quiet),
-        ["sound", rest @ ..] => {
-            if let Err(e) = sound_cmd(rest) {
+        "ui" | "tui" | "menu" => {
+            if sub_args.iter().any(|a| *a == "--help" || *a == "-h") {
+                println!("cosmic-mousetrap ui\n\nInteractive visual control center with clickable settings.\n\nUsage: cosmic-mousetrap ui");
+                return;
+            }
+            if let Err(e) = ui::run_ui() {
                 eprintln!("error: {e}");
                 std::process::exit(1);
             }
         }
-        ["voice", rest @ ..] => {
-            if let Err(e) = voice_cmd(rest) {
+        "doctor" => {
+            if let Err(e) = doctor::doctor_cmd(&sub_args) {
                 eprintln!("error: {e}");
                 std::process::exit(1);
             }
         }
-        ["notifications", v @ ("enable" | "disable")] => {
-            let on = *v == "enable";
-            match write_key("notifications", &on.to_string(), false) {
-                Ok(()) => println!("notifications {}", if on { "enabled" } else { "disabled" }),
-                Err(e) => {
-                    eprintln!("error: {e}");
-                    std::process::exit(1);
+        "on" => set_and_report(true, quiet, None, true),
+        "off" => set_and_report(false, quiet, None, true),
+        "toggle" => set_and_report(!read_current_state(), quiet, None, true),
+        "daemon" => run_daemon(quiet),
+        "sound" => {
+            if let Err(e) = sound_cmd(&sub_args) {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }
+        }
+        "voice" => {
+            if let Err(e) = voice_cmd(&sub_args) {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }
+        }
+        "notifications" => {
+            match sub_args.first().copied() {
+                Some("enable") => {
+                    let _ = write_key("notifications", "true", false);
+                    println!("notifications enabled");
+                }
+                Some("disable") => {
+                    let _ = write_key("notifications", "false", false);
+                    println!("notifications disabled");
+                }
+                _ => {
+                    eprintln!("usage: cosmic-mousetrap notifications enable|disable");
+                    std::process::exit(2);
                 }
             }
         }
@@ -1300,5 +1466,84 @@ mod tests {
         assert_eq!(resolve_sound("none"), None);
         assert_eq!(resolve_sound(""), None);
         assert_eq!(resolve_sound("   "), None);
+    }
+
+    #[test]
+    fn test_matcher_check_pid() {
+        let my_pid = std::process::id();
+        // Current process is the test runner (e.g. cosmic_mousetrap-...)
+        let comm = fs::read_to_string(format!("/proc/{my_pid}/comm")).unwrap_or_default();
+        let comm_trimmed = comm.trim().to_lowercase();
+
+        let matcher = Matcher {
+            names: vec![comm_trimmed.clone()],
+            markers: vec![],
+        };
+        assert_eq!(matcher.check_pid(my_pid), Some(comm_trimmed));
+
+        let non_matching = Matcher {
+            names: vec!["definitely_not_running_xyz".into()],
+            markers: vec![],
+        };
+        assert_eq!(non_matching.check_pid(my_pid), None);
+    }
+
+    #[test]
+    fn test_detect_cached_fast_path() {
+        let my_pid = std::process::id();
+        let comm = fs::read_to_string(format!("/proc/{my_pid}/comm")).unwrap_or_default();
+        let comm_trimmed = comm.trim().to_lowercase();
+
+        let matcher = Matcher {
+            names: vec![comm_trimmed.clone()],
+            markers: vec![],
+        };
+        let mut last_pid = Some(my_pid);
+        let res = matcher.detect_cached(&mut last_pid);
+        assert_eq!(res, Some(comm_trimmed));
+        assert_eq!(last_pid, Some(my_pid));
+    }
+
+    #[test]
+    fn test_cached_config_load() {
+        let mut cached = CachedConfig::new();
+        let cfg1 = cached.get().clone();
+        assert_eq!(cfg1.volume, Config::load().volume);
+    }
+
+    #[test]
+    fn test_cached_matcher_load() {
+        let mut cached = CachedMatcher::new();
+        let m = cached.get();
+        assert!(m.name_matches("wineserver"));
+    }
+
+    #[test]
+    fn test_doctor_report_status() {
+        let report = doctor::DoctorReport {
+            checks: vec![
+                doctor::CheckResult {
+                    name: "Check 1".into(),
+                    status: doctor::CheckStatus::Ok,
+                    message: "All good".into(),
+                    healed: false,
+                },
+                doctor::CheckResult {
+                    name: "Check 2".into(),
+                    status: doctor::CheckStatus::Ok,
+                    message: "Fixed".into(),
+                    healed: true,
+                },
+                doctor::CheckResult {
+                    name: "Check 3".into(),
+                    status: doctor::CheckStatus::Warning,
+                    message: "Non-critical".into(),
+                    healed: false,
+                },
+            ],
+        };
+        assert_eq!(report.ok_count(), 2);
+        assert_eq!(report.healed_count(), 1);
+        assert!(!report.has_errors());
     }
 }

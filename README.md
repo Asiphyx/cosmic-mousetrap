@@ -78,8 +78,59 @@ Installs, in order: a source build (if `cargo` is present), otherwise the prebui
 
 Without the service: `cargo install --git https://github.com/Asiphyx/cosmic-mousetrap.git`, then run `cosmic-mousetrap daemon` yourself.
 
+## Visual Control Center (TUI)
+
+Mousetrap includes an interactive visual terminal UI with clickable buttons and mouse wheel support built entirely in standard Rust (zero external crates):
+
+```bash
+cosmic-mousetrap ui      # or: cosmic-mousetrap tui / menu
+```
+
+- **Mouse support:** Full SGR 1006 mouse tracking—click any button directly on screen, or scroll up/down on volume and cue selectors to adjust them.
+- **Keyboard navigation:** Move with `Tab` / `Shift-Tab` / Arrow keys, press `Enter` or `Space` to select.
+- **Hotkeys:**
+  - `[S]` Toggle state (`cursor_follows_focus` ON / OFF)
+  - `[M]` Toggle mute / unmute
+  - `[+]` / `[-]` Adjust master volume
+  - `[T]` / `[Y]` Test ON / OFF audio cues
+  - `[N]` Toggle notifications
+  - `[V]` Download GLaDOS voice pack
+  - `[D]` Run Self-Healing Doctor
+  - `[R]` Restart systemd service
+  - `[Q]` or `Esc` Cleanly quit
+- **Live dashboard:** Polls and updates in real time—shows current setting, running game process name, systemd service state, and volume bar.
+- **Bulletproof terminal restoration:** Automatically restores terminal cooked mode, shows cursor, and exits alternate screen on exit, signals (SIGINT, SIGTERM, SIGHUP), or panic.
+
+## Self-Healing Doctor
+
+Diagnose and automatically repair system configuration, services, audio backends, and cues:
+
+```bash
+cosmic-mousetrap doctor         # run all diagnostic checks in read-only mode
+cosmic-mousetrap doctor --heal  # automatically repair any discovered issues
+```
+
+The doctor validates 8 critical subsystems:
+1. **COSMIC desktop setting:** Checks readability and writability of `~/.config/cosmic/com.system76.CosmicComp/v1/cursor_follows_focus`; auto-heal initializes missing directories and repairs corrupted values.
+2. **App configuration:** Validates `~/.config/cosmic-mousetrap/config.toml`; auto-heal writes default or sanitized configuration if missing or damaged.
+3. **Systemd user service:** Verifies unit file installation and running state; auto-heal installs the unit file and reloads/restarts the service.
+4. **Audio pipeline:** Detects available audio backends (`pw-play`, `paplay`, `ffplay`, `aplay`).
+5. **Desktop notifications:** Checks `notify-send` availability.
+6. **Audio cues & voice pack:** Checks signature chimes (`on-cue.wav`, `off-cue.wav`) and voice clips; auto-heal restores missing cues and downloads the GLaDOS voice pack if voice mode has 0 clips.
+7. **Daemon instance monitor:** Detects duplicate or orphaned daemon instances and terminates stale processes.
+8. **Stale temporary files:** Scans for and cleans up orphaned `.tmp` files.
+
+## Performance & Low-Overhead Net/Proc Engine
+
+Mousetrap is designed to run continuously in the background with near-zero CPU and memory overhead:
+- **`last_game_pid` fast-path:** Once a game process is identified, subsequent polls check that PID directly (<0.1 ms), bypassing the entire `/proc` directory traversal for the remainder of your gaming session.
+- **UID filtering & `comm`-first scan:** When scanning `/proc`, system and kernel processes belonging to other users are skipped immediately. The 16-byte `comm` is checked before expensive symlink resolution (`exe` and `cwd`).
+- **File mtime caching:** `config.toml` and `games.txt` are cached in memory; re-parsing only happens when their modification timestamp changes.
+
 ## Use
 ```bash
+cosmic-mousetrap ui              # visual control center with clickable settings
+cosmic-mousetrap doctor [--heal] # diagnose and self-repair configuration and service
 cosmic-mousetrap status          # current setting, detected game, sound/notification config
 cosmic-mousetrap on|off|toggle   # manual override (the daemon corrects it on the next change)
 systemctl --user status cosmic-mousetrap
