@@ -14,6 +14,11 @@ for arg in "$@"; do
       echo "  --purge   Also delete configuration and cached voice assets"
       exit 0
       ;;
+    *)
+      echo "Unknown option: $arg" >&2
+      echo "Usage: ./uninstall.sh [--purge]" >&2
+      exit 1
+      ;;
   esac
 done
 

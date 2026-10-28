@@ -519,6 +519,9 @@ fn pick_sound(slot: &str, spec: &str) -> Option<PathBuf> {
     if spec.eq_ignore_ascii_case("voice") {
         let (normal, rare, anomaly) = voice_clips(slot);
         if normal.is_empty() && rare.is_empty() && anomaly.is_empty() {
+            if let Some(sig) = signature_cue_path(slot) {
+                return Some(sig);
+            }
             return resolve_sound(if slot == "on" { "pop" } else { "unpop" });
         }
         return pick_voice_line(slot, normal, rare, anomaly);
@@ -645,13 +648,17 @@ fn cue_sound(enabled: bool, cfg: &Config) -> Option<JoinHandle<bool>> {
     }
 
     Some(thread::spawn(move || {
-        let mut ok = false;
+        let mut ok = true;
         if let Some(sig) = maybe_signature {
-            let _ = play(sig, (volume as u16 * 85 / 100) as u8).join();
-            thread::sleep(Duration::from_millis(60));
+            let sig_ok = play(sig, (volume as u16 * 85 / 100) as u8).join().unwrap_or(false);
+            ok = ok && sig_ok;
+            if voice_clip.is_some() {
+                thread::sleep(Duration::from_millis(60));
+            }
         }
         if let Some(clip) = voice_clip {
-            ok = play(clip, volume).join().unwrap_or(false);
+            let clip_ok = play(clip, volume).join().unwrap_or(false);
+            ok = ok && clip_ok;
         }
         ok
     }))
@@ -745,18 +752,17 @@ fn describe(slot: &str, spec: &str) -> String {
 
 fn test_slot(slot: &str, cfg: &Config) -> bool {
     let spec = if slot == "on" { &cfg.sound_on } else { &cfg.sound_off };
-    match pick_sound(slot, spec) {
-        None => {
-            println!("{slot}: nothing to play ({})", describe(slot, spec));
-            true
-        }
-        Some(f) => {
-            print!("{slot}: playing {} ... ", f.display());
-            let _ = std::io::stdout().flush();
-            let ok = play(f, cfg.volume).join().unwrap_or(false);
-            println!("{}", if ok { "ok" } else { "FAILED (no working player: pw-play/paplay/ffplay/aplay)" });
-            ok
-        }
+    print!("{slot}: testing cue ({}) ... ", describe(slot, spec));
+    let _ = std::io::stdout().flush();
+    let mut cfg_test = cfg.clone();
+    cfg_test.sound = true;
+    if let Some(h) = cue_sound(slot == "on", &cfg_test) {
+        let ok = h.join().unwrap_or(false);
+        println!("{}", if ok { "ok" } else { "FAILED (no working player: pw-play/paplay/ffplay/aplay)" });
+        ok
+    } else {
+        println!("nothing to play");
+        true
     }
 }
 
@@ -947,7 +953,23 @@ fn run_checked(cmd: &mut Command, what: &str) -> Result<(), String> {
 fn voice_download() -> Result<(), String> {
     let vdir = voice_dir();
     fs::create_dir_all(&vdir).map_err(|e| e.to_string())?;
-    let repo = "Asiphyx/cosmic-mousetrap";
+
+    let local_pack = Path::new("cosmic-mousetrap-glados-voice.tar.gz");
+    if local_pack.is_file() {
+        println!("Extracting local voice pack: {}", local_pack.display());
+        let res = Command::new("tar").args(["-xzf", "cosmic-mousetrap-glados-voice.tar.gz", "-C"]).arg(&vdir).status();
+        if let Ok(s) = res {
+            if s.success() {
+                let (on, on_r, on_a) = voice_clips("on");
+                let (off, off_r, off_a) = voice_clips("off");
+                let total = on.len() + on_r.len() + on_a.len() + off.len() + off_r.len() + off_a.len();
+                println!("Installed GLaDOS voice pack: {total} clips ready.");
+                return Ok(());
+            }
+        }
+    }
+
+    let repo = env::var("COSMIC_MOUSETRAP_REPO").unwrap_or_else(|_| "Asiphyx/cosmic-mousetrap".to_string());
     let url = format!("https://github.com/{repo}/releases/latest/download/cosmic-mousetrap-glados-voice.tar.gz");
     println!("Downloading GLaDOS voice pack (106 lines) from GitHub Releases...");
 
@@ -1240,9 +1262,15 @@ mod tests {
 
     #[test]
     fn test_expand_tilde() {
+        let old_home = env::var_os("HOME");
         env::set_var("HOME", "/tmp/fakehome");
         assert_eq!(expand_tilde("~/test.wav"), PathBuf::from("/tmp/fakehome/test.wav"));
         assert_eq!(expand_tilde("/var/log"), PathBuf::from("/var/log"));
+        if let Some(h) = old_home {
+            env::set_var("HOME", h);
+        } else {
+            env::remove_var("HOME");
+        }
     }
 
     #[test]
@@ -1258,5 +1286,19 @@ mod tests {
     #[test]
     fn test_default_lines_count() {
         assert_eq!(DEFAULT_LINES.len(), 106);
+    }
+
+    #[test]
+    fn test_slot_key() {
+        assert_eq!(slot_key("on"), Some("sound_on"));
+        assert_eq!(slot_key("off"), Some("sound_off"));
+        assert_eq!(slot_key("other"), None);
+    }
+
+    #[test]
+    fn test_resolve_sound_none() {
+        assert_eq!(resolve_sound("none"), None);
+        assert_eq!(resolve_sound(""), None);
+        assert_eq!(resolve_sound("   "), None);
     }
 }

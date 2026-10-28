@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEST_DIR="$(mktemp -d /tmp/cosmic-test-XXXXXX)"
 echo "Test environment directory: $TEST_DIR"
+trap 'rm -rf "$TEST_DIR"' EXIT
 
 REAL_HOME="$HOME"
 FAKE_HOME="$TEST_DIR/user"
@@ -14,7 +16,7 @@ export RUSTUP_HOME="$REAL_HOME/.rustup"
 export CARGO_HOME="$REAL_HOME/.cargo"
 
 echo "=== 1. Testing clean install without voice ==="
-$SCRIPT_DIR/install.sh --no-service
+"$SCRIPT_DIR/install.sh" --no-service
 
 echo "=== 2. Verifying installed artifacts ==="
 test -x "$HOME/.local/bin/cosmic-mousetrap"
@@ -29,10 +31,17 @@ echo "All required files installed correctly!"
 echo "=== 3. Testing status in fresh environment ==="
 "$HOME/.local/bin/cosmic-mousetrap" status
 
-echo "=== 4. Testing voice status fallback behavior ==="
+echo "=== 4. Testing sound show and sound list ==="
+"$HOME/.local/bin/cosmic-mousetrap" sound show
+"$HOME/.local/bin/cosmic-mousetrap" sound list
+
+echo "=== 5. Testing sound test fallback behavior (signature chimes) ==="
+"$HOME/.local/bin/cosmic-mousetrap" sound test
+
+echo "=== 6. Testing voice status fallback behavior ==="
 "$HOME/.local/bin/cosmic-mousetrap" voice status
 
-echo "=== 5. Testing on / off / toggle config writes ==="
+echo "=== 7. Testing on / off / toggle config writes ==="
 "$HOME/.local/bin/cosmic-mousetrap" on
 setting="$(cat "$HOME/.config/cosmic/com.system76.CosmicComp/v1/cursor_follows_focus")"
 test "$setting" = "true"
@@ -48,27 +57,42 @@ setting="$(cat "$HOME/.config/cosmic/com.system76.CosmicComp/v1/cursor_follows_f
 test "$setting" = "true"
 echo "Toggled: $setting"
 
-echo "=== 6. Testing voice lines ==="
+echo "=== 8. Testing notifications toggle ==="
+"$HOME/.local/bin/cosmic-mousetrap" notifications disable
+grep -q '^notifications = false' "$HOME/.config/cosmic-mousetrap/config.toml"
+"$HOME/.local/bin/cosmic-mousetrap" notifications enable
+grep -q '^notifications = true' "$HOME/.config/cosmic-mousetrap/config.toml"
+
+echo "=== 9. Testing sound set ==="
+"$HOME/.local/bin/cosmic-mousetrap" sound set on pop
+grep -q '^sound_on = "pop"' "$HOME/.config/cosmic-mousetrap/config.toml"
+"$HOME/.local/bin/cosmic-mousetrap" sound set on voice
+grep -q '^sound_on = "voice"' "$HOME/.config/cosmic-mousetrap/config.toml"
+
+echo "=== 10. Testing voice lines count ==="
 count="$("$HOME/.local/bin/cosmic-mousetrap" voice lines | grep -E '^  (on|off)' | wc -l)"
 echo "Found $count voice lines."
 test "$count" -eq 106
 
-echo "=== 7. Testing install with voice pack ==="
-$SCRIPT_DIR/install.sh --with-voice --no-service
+echo "=== 11. Testing install with voice pack ==="
+"$SCRIPT_DIR/install.sh" --with-voice --no-service
 "$HOME/.local/bin/cosmic-mousetrap" voice status
 installed_clips="$(find "$HOME/.local/share/cosmic-mousetrap/voice" -name "*.mp3" | wc -l)"
 echo "Installed clips count: $installed_clips"
 test "$installed_clips" -eq 106
 
-echo "=== 8. Testing uninstall ==="
-$SCRIPT_DIR/uninstall.sh
+echo "=== 12. Testing sound test with voice clips installed ==="
+"$HOME/.local/bin/cosmic-mousetrap" sound test
+
+echo "=== 13. Testing uninstall ==="
+"$SCRIPT_DIR/uninstall.sh"
 test ! -f "$HOME/.local/bin/cosmic-mousetrap"
 test ! -f "$HOME/.config/systemd/user/cosmic-mousetrap.service"
 test -f "$HOME/.config/cosmic-mousetrap/config.toml"
 echo "Uninstall kept config as expected!"
 
-echo "=== 9. Testing uninstall --purge ==="
-$SCRIPT_DIR/uninstall.sh --purge
+echo "=== 14. Testing uninstall --purge ==="
+"$SCRIPT_DIR/uninstall.sh" --purge
 test ! -d "$HOME/.config/cosmic-mousetrap"
 test ! -d "$HOME/.local/share/cosmic-mousetrap"
 echo "Purge wiped config and data directories!"

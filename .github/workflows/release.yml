@@ -31,6 +31,12 @@ jobs:
           if [ -d assets ]; then cp -r assets pkg/cosmic-mousetrap/; fi
           tar -C pkg -czf dist/cosmic-mousetrap-${GITHUB_REF_NAME}-x86_64-linux.tar.gz cosmic-mousetrap
 
+      - name: Fetch voice pack asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download -R "$GITHUB_REPOSITORY" -p "cosmic-mousetrap-glados-voice.tar.gz" -D dist/ || echo "Voice pack asset not found from prior release"
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -65,21 +65,36 @@ download_release() {
   case "$REPO" in *"<"*) return 1 ;; esac
   local base="https://github.com/$REPO/releases/latest/download"
   local tmp; tmp="$(mktemp -d)"
-  trap 'rm -rf "$tmp"' RETURN
-  if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$base/$NAME-x86_64-linux" -o "$tmp/bin" || return 1
-    curl -fsSL "$base/$NAME-x86_64-linux.sha256" -o "$tmp/sum" || return 1
+  local ok=0
+  if command -v gh >/dev/null 2>&1 && gh release download -R "$REPO" -p "$NAME-x86_64-linux" -p "$NAME-x86_64-linux.sha256" -D "$tmp" 2>/dev/null; then
+    mv "$tmp/$NAME-x86_64-linux" "$tmp/bin" 2>/dev/null || true
+    mv "$tmp/$NAME-x86_64-linux.sha256" "$tmp/sum" 2>/dev/null || true
+    ok=1
+  elif command -v curl >/dev/null 2>&1; then
+    if curl -fsSL "$base/$NAME-x86_64-linux" -o "$tmp/bin" 2>/dev/null && \
+       curl -fsSL "$base/$NAME-x86_64-linux.sha256" -o "$tmp/sum" 2>/dev/null; then
+      ok=1
+    fi
   elif command -v wget >/dev/null 2>&1; then
-    wget -qO "$tmp/bin" "$base/$NAME-x86_64-linux" || return 1
-    wget -qO "$tmp/sum" "$base/$NAME-x86_64-linux.sha256" || return 1
-  else
-    return 1
+    if wget -qO "$tmp/bin" "$base/$NAME-x86_64-linux" 2>/dev/null && \
+       wget -qO "$tmp/sum" "$base/$NAME-x86_64-linux.sha256" 2>/dev/null; then
+      ok=1
+    fi
   fi
-  local want got
-  want="$(cut -d' ' -f1 "$tmp/sum")"
-  got="$(sha256sum "$tmp/bin" | cut -d' ' -f1)"
-  [ -n "$want" ] && [ "$want" = "$got" ] || { echo "Checksum mismatch; ignoring download." >&2; return 1; }
-  install -m 755 "$tmp/bin" "$bin_dst"
+  if [ "$ok" = "1" ] && [ -f "$tmp/bin" ] && [ -f "$tmp/sum" ]; then
+    local want got
+    want="$(cut -d' ' -f1 "$tmp/sum")"
+    got="$(sha256sum "$tmp/bin" | cut -d' ' -f1)"
+    if [ -n "$want" ] && [ "$want" = "$got" ]; then
+      install -m 755 "$tmp/bin" "$bin_dst"
+      rm -rf "$tmp"
+      return 0
+    else
+      echo "Checksum mismatch; ignoring download." >&2
+    fi
+  fi
+  rm -rf "$tmp"
+  return 1
 }
 
 # --- Install binary -----------------------------------------------------------------
