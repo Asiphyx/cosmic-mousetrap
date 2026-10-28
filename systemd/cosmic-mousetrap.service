@@ -1,0 +1,14 @@
+[Unit]
+Description=Mousetrap: auto-toggle COSMIC cursor_follows_focus for games
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/cosmic-mousetrap daemon
+Restart=always
+RestartSec=3
+# Stopping the service / logging out mid-game must not leave cursor_follows_focus stuck on.
+ExecStopPost=%h/.local/bin/cosmic-mousetrap off --quiet
+
+[Install]
+WantedBy=default.target
