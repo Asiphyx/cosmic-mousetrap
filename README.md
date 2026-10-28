@@ -40,14 +40,14 @@ cosmic-mousetrap notifications disable      # popups off, sound stays
 
 Custom files are copied into `~/.config/cosmic-mousetrap/sounds/`, so moving the original is fine. Point a cue at a **folder** instead (`sound set on ~/Music/mousetrap-on/`) and a random file from it plays each time. Playback uses `pw-play`, `paplay`, `ffplay` or `aplay` (first that works). Everything is also editable in `~/.config/cosmic-mousetrap/config.toml` (applies live), including the icons (`icon_on` / `icon_off`: a theme icon name or an image path).
 
-### Audio cues & GLaDOS lines
-Mousetrap includes custom mechanical signature cues (chime+snap for ON, latch+sigh for OFF) and support for 106 authentic GLaDOS voice lines across 3 tiers (80% standard, 18% rare, 2% existential anomalies):
+### Audio cues & Synthetic GLaDOS Voice Lines
+Mousetrap includes custom mechanical signature cues (chime+snap for ON, latch+sigh for OFF) and support for 106 synthetic GLaDOS-style voice lines (parody/fan tribute) across 3 tiers (80% standard, 18% rare, 2% existential anomalies):
 
 > **ON:** "Welcome to the chamber. Please leave your excuses at the loading screen." / "MouseTrap armed. Your cursor has been sentenced to a single window." ...
 > **OFF:** "Simulation closed. Your cursor has been granted parole." / "Game over. Your tabs are safe." ...
 
 ```bash
-# Option 1: Download the pre-rendered 106-clip GLaDOS voice pack
+# Option 1: Download the pre-rendered 106-clip synthetic voice pack
 cosmic-mousetrap voice download
 
 # Option 2: Build voice clips locally using Piper TTS
@@ -151,4 +151,12 @@ To also remove user configuration and cached voice clips:
 - Only toggles the one cosmic-comp setting; it won't fix unrelated input bugs.
 - Write path is cosmic-comp's config schema v1; a future COSMIC update may change it.
 
-License: MIT OR Apache-2.0 ([MIT](LICENSE-MIT), [Apache](LICENSE-APACHE)).
+## License & Provenance
+
+### Software Code
+The core daemon, CLI, and TUI are dual-licensed under **MIT OR Apache-2.0** ([LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE)).
+
+### Voice Assets & Fan Tribute Notice
+- The announcement dialogue lines are original parody scripts written for Mousetrap COSMIC.
+- The optional 106-clip voice pack consists of synthetic, non-commercial fan-tribute audio synthesized using neural text-to-speech as an homage to the iconic GLaDOS character from Valve Corporation's *Portal* series.
+- *Portal* and *GLaDOS* are trademarks and copyrights of Valve Corporation. This project is unaffiliated with, endorsed by, or sponsored by Valve Corporation. All voice clips are distributed strictly for non-commercial fan recreation under fair use and Valve's video/fan content policy conventions.

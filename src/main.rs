@@ -1250,7 +1250,7 @@ fn voice_cmd(args: &[&str]) -> Result<(), String> {
             let (on, on_rare, on_anomaly) = voice_clips("on");
             let (off, off_rare, off_anomaly) = voice_clips("off");
             let total = on.len() + on_rare.len() + on_anomaly.len() + off.len() + off_rare.len() + off_anomaly.len();
-            println!("voice:  Portal 2 GLaDOS");
+            println!("voice:  Portal 2 GLaDOS (synthetic fan tribute)");
             if total == 0 {
                 println!("clips:  None installed (run `cosmic-mousetrap voice download` or `voice setup`)");
             } else {

@@ -29,7 +29,7 @@ jobs:
           cp install.sh uninstall.sh README.md LICENSE-MIT LICENSE-APACHE pkg/cosmic-mousetrap/
           cp systemd/cosmic-mousetrap.service pkg/cosmic-mousetrap/systemd/
           if [ -d assets ]; then cp -r assets pkg/cosmic-mousetrap/; fi
-          tar -C pkg -czf dist/cosmic-mousetrap-${GITHUB_REF_NAME}-x86_64-linux.tar.gz cosmic-mousetrap
+          tar --owner=0 --group=0 --numeric-owner -C pkg -czf dist/cosmic-mousetrap-${GITHUB_REF_NAME}-x86_64-linux.tar.gz cosmic-mousetrap
 
       - name: Fetch voice pack asset
         env:
