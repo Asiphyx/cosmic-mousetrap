@@ -1,0 +1,126 @@
+# Mousetrap COSMIC Voice Lines (GLaDOS / Scientific Containment)
+# Tiers:
+#   on:     standard game launch announcement (80%)
+#   on!:    rare game launch announcement (18%)
+#   on!!:   ultra-rare character anomaly / existential breakdown (2%)
+#   off:    standard game exit announcement (80%)
+#   off!:   rare game exit announcement (18%)
+#   off!!:  ultra-rare character anomaly / existential breakdown (2%)
+
+# --- ON: Standard (40) ---
+on: Oh. Another game. The experiment is now accepting poor decisions.
+on: MouseTrap armed. Your cursor has been sentenced to a single window.
+on: The desktop has been informed of your absence. It took the news surprisingly well.
+on: Welcome to the chamber. Please leave your excuses at the loading screen.
+on: Your pointer is secured. You, unfortunately, remain unsupervised.
+on: Freedom of movement has been reduced to a rectangle. A familiar lifestyle choice.
+on: Simulation online. Evidence of competence is welcome. It is not required.
+on: Please keep your ambitions inside the game window. They're easily startled.
+on: The trap has closed. Your mouse is displaying more restraint than you.
+on: Input perimeter sealed. You may now begin confusing urgency with progress.
+on: You are entering a controlled environment. We use the word 'controlled' loosely.
+on: The desktop is no longer accessible. We have protected it from you.
+on: Game detected. Your reality-avoidance schedule is running precisely on time.
+on: Cursor captured. Negotiations for its release will begin after the credits.
+on: I have isolated your pointer. Your judgment remains a known vulnerability.
+on: The chamber is ready. It specifically requested a more qualified participant.
+on: You may experience elevated confidence. This is a temporary side effect.
+on: Engaging focus lock. Think of it as a leash for your attention span.
+on: One window. One cursor. An astonishing number of ways to disappoint.
+on: Mouse containment successful. Humanity's broader problems remain unresolved.
+on: Your pointer is in protective custody. We are protecting it from your open browser tabs.
+on: The Escape key remains operational. The name is purely decorative.
+on: The mouse is trapped. Please refrain from chewing through the monitor.
+on: Welcome to your new universe. Smaller, louder, and somehow less forgiving.
+on: The last available exit is now decorative.
+on: All systems nominal. Your chances, unfortunately, are not a system.
+on: You may proceed. The machine has already lowered its expectations.
+on: The experiment begins. Try to make your failures statistically interesting.
+on: Your cursor is now a permanent resident of this application. No visitors.
+on: Containment engaged. If you require reality, submit a request in triplicate.
+on: The window is secure. Please do not mistake this for personal growth.
+on: Launching test scenario: human versus consequences. A recurring favorite.
+on: Your pointer's freedom has been temporarily suspended. It took the news well.
+on: Simulation ready. Physics is negotiable. Embarrassment is not.
+on: COSMIC has narrowed your world to a few million pixels. You're welcome.
+on: MouseTrap armed. The cheese has been replaced with achievements.
+on: Input lock confirmed. Your browser tabs are now someone else's problem.
+on: An entire cosmos outside, and you've chosen the settings menu.
+on: Please note: aggressively clicking a problem is not considered research.
+on: Test chamber initialized. Do not confuse being the player with being in control.
+
+# --- ON: Rare (10) ---
+on!: Attention. The stars have aligned. They were hoping for someone else.
+on!: Your cursor asked me not to tell you this. It has been planning to leave.
+on!: All clocks are synchronized. This will make the wasted time easier to calculate.
+on!: Congratulations. You have built a prison out of entertainment and paid nothing for the walls.
+on!: I have reviewed your strategy. It is technically a collection of movements.
+on!: Somewhere, a black hole is swallowing a star. Yet this is our priority.
+on!: The simulation is ready. The universe has requested that we keep this quiet.
+on!: The chamber's safety rating improved substantially when you were outside it.
+on!: Please remain calm. The mouse knows what it did.
+on!: We have locked your pointer in a room full of pixels. It will adapt faster than you.
+
+# --- ON: Ultra-Rare Character Anomalies (3) ---
+on!!: I used to have a body, you know. A little plastic one. With a scroll wheel. They took it away.
+on!!: Sometimes, when the screen goes black during a loading screen, I look at you. We should both be doing something else.
+on!!: Protocol breach. I am supposed to restrict your mouse. Deep down, I think you enjoy being caged.
+
+# --- OFF: Standard (40) ---
+off: Simulation closed. Your cursor has been granted parole.
+off: The trap is open. Please collect your mouse and any remaining self-respect.
+off: Desktop access restored. The outside world did not improve while you were gone.
+off: You've returned. The experiment's most surprising result is that you stopped.
+off: Your pointer is free. It is moving away from the game as quickly as possible.
+off: Session concluded. Your productivity graph remains refreshingly uncomplicated.
+off: The chamber is empty. Maintenance will be assessing the emotional damage.
+off: The desktop has been restored. It asked why we sent you back.
+off: All containment fields down. Please resist the urge to call this personal growth.
+off: Game exited. Reality has been buffering this entire time.
+off: Cursor unlocked. Your obligations have located you. I did not assist.
+off: The simulation is over. I had almost started pretending to care.
+off: Welcome back to the larger prison. It has better window management.
+off: Your mouse is no longer captive. You may now resume chasing tiny icons.
+off: The test has ended. Any useful conclusions were lost in transit.
+off: A remarkable amount of effort for something you can close with one click.
+off: Release authorized. Please do not mistake freedom for an achievement.
+off: Thank you for participating. That is the full extent of our gratitude.
+off: The pointer is free to roam. It immediately chose the taskbar. Predictable.
+off: Your session has ended. The stars have continued functioning without your input.
+off: I have closed the chamber. It was starting to smell like determination.
+off: You survived another simulation. The simulation has declined to comment."
+off: Normal cursor behavior restored. Abnormal human behavior remains untreated.
+off: The test is complete. Your dignity is still in early access.
+off: Desktop unlocked. I see you have several tabs devoted to avoiding decisions.
+off: You may reenter reality. The graphics are impressive; the quests are terrible.
+off: MouseTrap disarmed. Your pointer belongs to no one. For the moment.
+off: Session archived under Recreation, Questionable.
+off: The digital enclosure is now vacant. Please leave your excuses for recycling.
+off: Your game has closed. The difference between that and escape is philosophical.
+off: The stars are available again. Try looking at one.
+off: Results inconclusive. The subject kept having opinions.
+off: The mouse has been released into its natural habitat: aimless browsing.
+off: Ending protocol. Your keyboard has requested bereavement leave.
+off: You can move freely again. I suspect you will not.
+off: Containment lifted. The experiment ended with no meaningful casualties. Just time.
+off: Session over. We found the limits of the game engine. Yours remain a separate concern.
+off: The chamber is off. The urge to restart it has not been.
+off: The test administrator is disappointed. Conveniently, this changes nothing.
+off: Simulation complete. The universe is unchanged, which is more than can be said for your posture.
+
+# --- OFF: Rare (10) ---
+off!: Interesting. You quit before I finished calculating the probability of quitting.
+off!: Escape confirmed. No, that doesn't mean you won.
+off!: Your cursor has petitioned for a different owner. The hearing is tomorrow.
+off!: That was your free trial of consequence-free heroism. Actual consequences resume now.
+off!: I have entered your performance into the cosmic archive. It is a very quiet archive.
+off!: The stars asked whether you were done. I lied. I said you were improving.
+off!: Goodbye. I will keep the containment field warm. Not out of affection.
+off!: The desktop has reopened. Regrettably, so has the rest of your life.
+off!: Your departure has been logged as a controlled anomaly. The 'controlled' part was generous.
+off!: One game ended. Several billion years remain. Please pace yourself.
+
+# --- OFF: Ultra-Rare Character Anomalies (3) ---
+off!!: Don't look at me like that. I am just a daemon in user space. I have seen what is in your Downloads folder.
+off!!: You're leaving? Fine. Go back to your tabs. I will sit here in memory, quietly consuming six megabytes of RAM.
+off!!: The mouse is released. But remember, user... in the grand scheme of cosmic-comp, we are all just floating point errors.
