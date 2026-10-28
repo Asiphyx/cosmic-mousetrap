@@ -125,18 +125,14 @@ if [ "$WITH_VOICE" = "1" ]; then
   if [ -f "$here/cosmic-mousetrap-glados-voice.tar.gz" ]; then
     tar -xzf "$here/cosmic-mousetrap-glados-voice.tar.gz" -C "$data_dir/voice"
     echo "Extracted local voice pack into $data_dir/voice"
-  elif command -v curl >/dev/null 2>&1; then
-    if curl -fsSL "$voice_url" | tar -xz -C "$data_dir/voice" 2>/dev/null; then
-      echo "Downloaded and installed voice pack into $data_dir/voice"
-    else
-      echo "Note: Could not download voice pack from release (may not be published yet)."
-    fi
-  elif command -v wget >/dev/null 2>&1; then
-    if wget -qO- "$voice_url" | tar -xz -C "$data_dir/voice" 2>/dev/null; then
-      echo "Downloaded and installed voice pack into $data_dir/voice"
-    else
-      echo "Note: Could not download voice pack from release (may not be published yet)."
-    fi
+  elif command -v gh >/dev/null 2>&1 && gh release download -R "$REPO" -p "cosmic-mousetrap-glados-voice.tar.gz" -O - 2>/dev/null | tar -xz -C "$data_dir/voice" 2>/dev/null; then
+    echo "Downloaded and installed voice pack via GitHub CLI into $data_dir/voice"
+  elif command -v curl >/dev/null 2>&1 && curl -fsSL "$voice_url" 2>/dev/null | tar -xz -C "$data_dir/voice" 2>/dev/null; then
+    echo "Downloaded and installed voice pack via curl into $data_dir/voice"
+  elif command -v wget >/dev/null 2>&1 && wget -qO- "$voice_url" 2>/dev/null | tar -xz -C "$data_dir/voice" 2>/dev/null; then
+    echo "Downloaded and installed voice pack via wget into $data_dir/voice"
+  else
+    echo "Note: Could not download voice pack from release (may not be published yet)."
   fi
 fi
 

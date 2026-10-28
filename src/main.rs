@@ -947,21 +947,36 @@ fn run_checked(cmd: &mut Command, what: &str) -> Result<(), String> {
 fn voice_download() -> Result<(), String> {
     let vdir = voice_dir();
     fs::create_dir_all(&vdir).map_err(|e| e.to_string())?;
-    let url = "https://github.com/Asiphyx/cosmic-mousetrap/releases/latest/download/cosmic-mousetrap-glados-voice.tar.gz";
+    let repo = "Asiphyx/cosmic-mousetrap";
+    let url = format!("https://github.com/{repo}/releases/latest/download/cosmic-mousetrap-glados-voice.tar.gz");
     println!("Downloading GLaDOS voice pack (106 lines) from GitHub Releases...");
 
-    let status = if Command::new("curl").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
+    let gh_attempt = if Command::new("gh").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
         Command::new("sh")
             .arg("-c")
-            .arg(format!("curl -fsSL '{url}' | tar -xz -C '{}'", vdir.display()))
-            .status()
-    } else if Command::new("wget").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
-        Command::new("sh")
-            .arg("-c")
-            .arg(format!("wget -qO- '{url}' | tar -xz -C '{}'", vdir.display()))
+            .arg(format!("gh release download -R '{repo}' -p 'cosmic-mousetrap-glados-voice.tar.gz' -O - 2>/dev/null | tar -xz -C '{}'", vdir.display()))
             .status()
     } else {
-        return Err("neither curl nor wget is available".into());
+        Err(std::io::Error::new(std::io::ErrorKind::NotFound, "gh not found"))
+    };
+
+    let status = match gh_attempt {
+        Ok(s) if s.success() => Ok(s),
+        _ => {
+            if Command::new("curl").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
+                Command::new("sh")
+                    .arg("-c")
+                    .arg(format!("curl -fsSL '{url}' | tar -xz -C '{}'", vdir.display()))
+                    .status()
+            } else if Command::new("wget").arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok() {
+                Command::new("sh")
+                    .arg("-c")
+                    .arg(format!("wget -qO- '{url}' | tar -xz -C '{}'", vdir.display()))
+                    .status()
+            } else {
+                return Err("neither gh, curl, nor wget is available".into());
+            }
+        }
     };
 
     match status {
