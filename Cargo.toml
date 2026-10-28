@@ -1,0 +1,21 @@
+[package]
+name = "cosmic-mousetrap"
+version = "1.1.0"
+edition = "2021"
+description = "Mousetrap: snaps COSMIC cursor_follows_focus on for games, off for the desktop"
+license = "MIT OR Apache-2.0"
+authors = ["Asiphyx"]
+repository = "https://github.com/Asiphyx/cosmic-mousetrap"
+homepage = "https://github.com/Asiphyx/cosmic-mousetrap"
+readme = "README.md"
+keywords = ["cosmic", "pop-os", "gaming", "wayland", "mouse"]
+categories = ["command-line-utilities", "os::unix-apis"]
+
+[dependencies]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

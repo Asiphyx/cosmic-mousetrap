@@ -1,0 +1,30 @@
+# Rust
+target/
+**/*.rs.bk
+*.pdb
+
+# Build & packaging artifacts
+*.tar.gz
+*.tar.xz
+*.zip
+dist/
+pkg/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Environment and secrets
+.env
+.env.*
+*.env
+
+# Cache and temporary files
+.cache/
+*.tmp
+*.bak
+scratch/
+tmp/
