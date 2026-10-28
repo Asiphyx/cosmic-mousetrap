@@ -156,7 +156,8 @@ To also remove user configuration and cached voice clips:
 ### Software Code
 The core daemon, CLI, and TUI are dual-licensed under **MIT OR Apache-2.0** ([LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE)).
 
-### Voice Assets & Fan Tribute Notice
-- The announcement dialogue lines are original parody scripts written for Mousetrap COSMIC.
-- The optional 106-clip voice pack consists of synthetic, non-commercial fan-tribute audio synthesized using neural text-to-speech as an homage to the iconic GLaDOS character from Valve Corporation's *Portal* series.
-- *Portal* and *GLaDOS* are trademarks and copyrights of Valve Corporation. This project is unaffiliated with, endorsed by, or sponsored by Valve Corporation. All voice clips are distributed strictly for non-commercial fan recreation under fair use and Valve's video/fan content policy conventions.
+### Voice Assets & Unofficial Fan Tribute Notice
+- **Independent Utility**: Mousetrap is an independent desktop utility. The voice pack is completely optional and modular; Mousetrap functions fully without it using standard system chimes or desktop presets.
+- **Fan Tribute**: The 106 voice clips are an unofficial, non-commercial fan tribute featuring synthetic neural text-to-speech audio inspired by the iconic GLaDOS character from Valve Corporation's *Portal* series.
+- **No Affiliation**: This project is not affiliated with, endorsed by, or sponsored by Valve Corporation. *Portal* and *GLaDOS* are trademarks and copyrights of Valve Corporation.
+- **Takedown & Replacement**: If Valve Corporation or any rights holder requests removal or changes to the voice assets, they will be promptly removed or updated without affecting Mousetrap's core cursor-management functionality. Users can also supply their own custom audio or use local TTS (Piper) via `cosmic-mousetrap sound set`.
