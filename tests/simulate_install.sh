@@ -8,10 +8,17 @@ trap 'rm -rf "$TEST_DIR"' EXIT
 
 REAL_HOME="$HOME"
 FAKE_HOME="$TEST_DIR/user"
-mkdir -p "$FAKE_HOME"
+mkdir -p "$FAKE_HOME" "$TEST_DIR/bin"
+
+# Mock systemctl so simulated runs never mutate host user services
+cat > "$TEST_DIR/bin/systemctl" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+chmod +x "$TEST_DIR/bin/systemctl"
 
 export HOME="$FAKE_HOME"
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$TEST_DIR/bin:$HOME/.local/bin:$PATH"
 export RUSTUP_HOME="$REAL_HOME/.rustup"
 export CARGO_HOME="$REAL_HOME/.cargo"
 
@@ -112,14 +119,14 @@ fi
 echo "UI correctly required a terminal tty."
 
 echo "=== 15. Testing uninstall ==="
-"$SCRIPT_DIR/uninstall.sh"
+"$SCRIPT_DIR/uninstall.sh" --no-service
 test ! -f "$HOME/.local/bin/cosmic-mousetrap"
 test ! -f "$HOME/.config/systemd/user/cosmic-mousetrap.service"
 test -f "$HOME/.config/cosmic-mousetrap/config.toml"
 echo "Uninstall kept config as expected!"
 
 echo "=== 16. Testing uninstall --purge ==="
-"$SCRIPT_DIR/uninstall.sh" --purge
+"$SCRIPT_DIR/uninstall.sh" --purge --no-service
 test ! -d "$HOME/.config/cosmic-mousetrap"
 test ! -d "$HOME/.local/share/cosmic-mousetrap"
 echo "Purge wiped config and data directories!"
